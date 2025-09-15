@@ -32,7 +32,7 @@ google = oauth.register(
 def login_required(f):
     @wraps(f)
     def decorated_function(*args, **kwargs):
-        if 'user' not in session:
+        if 'user' not in session and not session.get('guest_mode', False):
             return jsonify({'error': 'Authentication required'}), 401
         return f(*args, **kwargs)
     return decorated_function
@@ -43,7 +43,7 @@ def home():
     """
     Serves the main index.html file from the 'templates' folder.
     """
-    if 'user' not in session:
+    if 'user' not in session and not session.get('guest_mode', False):
         return render_template('signin.html')
     return render_template('index.html')
 
@@ -85,16 +85,31 @@ def authorize():
     
     return redirect('/')
 
+@app.route('/guest')
+def guest_mode():
+    """Enable guest mode for users who don't want to sign in"""
+    session['guest_mode'] = True
+    session['user'] = {
+        'id': 'guest',
+        'email': 'guest@example.com',
+        'name': 'Guest User',
+        'picture': ''
+    }
+    return redirect('/')
+
 @app.route('/logout')
 def logout():
     session.pop('user', None)
     session.pop('chats', None)
+    session.pop('guest_mode', None)
     return redirect('/signin')
 
 @app.route('/api/user')
 def get_user():
     if 'user' in session:
-        return jsonify(session['user'])
+        user_data = session['user'].copy()
+        user_data['is_guest'] = session.get('guest_mode', False)
+        return jsonify(user_data)
     return jsonify({'error': 'Not authenticated'}), 401
 
 def query_gemini_text(prompt: str, history=None) -> str:

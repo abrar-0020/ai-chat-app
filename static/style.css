@@ -348,6 +348,17 @@ body {
     object-fit: cover;
 }
 
+.user-avatar i {
+    font-size: 1rem;
+    color: var(--text-secondary);
+}
+
+/* Guest mode specific styles */
+.user-email[title*="Guest"] {
+    color: #f59e0b;
+    font-style: italic;
+}
+
 .user-details {
     flex: 1;
     min-width: 0;

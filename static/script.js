@@ -72,15 +72,70 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!user) return;
         
         userName.textContent = user.name;
-        userEmail.textContent = user.email;
         
-        if (user.picture) {
-            userAvatar.innerHTML = `<img src="${user.picture}" alt="${user.name}">`;
+        if (user.is_guest) {
+            userEmail.textContent = 'Guest Mode - Limited Features';
+            userAvatar.innerHTML = `<i class="fa-solid fa-user-secret"></i>`;
+            updateUserMenu(true); // Guest menu
         } else {
-            // Show initials if no picture
-            const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
-            userAvatar.textContent = initials;
+            userEmail.textContent = user.email;
+            if (user.picture) {
+                userAvatar.innerHTML = `<img src="${user.picture}" alt="${user.name}">`;
+            } else {
+                // Show initials if no picture
+                const initials = user.name.split(' ').map(n => n[0]).join('').toUpperCase();
+                userAvatar.textContent = initials;
+            }
+            updateUserMenu(false); // Regular user menu
         }
+    };
+
+    const updateUserMenu = (isGuest) => {
+        const userMenu = document.getElementById('user-menu');
+        
+        if (isGuest) {
+            userMenu.innerHTML = `
+                <button class="user-menu-item" onclick="signInWithGoogle()">
+                    <i class="fa-brands fa-google"></i>
+                    Sign in with Google
+                </button>
+                <button class="user-menu-item" onclick="showSettings()">
+                    <i class="fa-solid fa-cog"></i>
+                    Settings
+                </button>
+                <button class="user-menu-item" onclick="clearAllChats()">
+                    <i class="fa-solid fa-trash-can"></i>
+                    Clear All Chats
+                </button>
+                <button class="user-menu-item" onclick="window.location.href='/logout'">
+                    <i class="fa-solid fa-sign-out-alt"></i>
+                    Exit Guest Mode
+                </button>
+            `;
+        } else {
+            userMenu.innerHTML = `
+                <button class="user-menu-item" onclick="window.open('https://myaccount.google.com', '_blank')">
+                    <i class="fa-solid fa-user"></i>
+                    Manage Account
+                </button>
+                <button class="user-menu-item" onclick="showSettings()">
+                    <i class="fa-solid fa-cog"></i>
+                    Settings
+                </button>
+                <button class="user-menu-item" onclick="clearAllChats()">
+                    <i class="fa-solid fa-trash-can"></i>
+                    Clear All Chats
+                </button>
+                <button class="user-menu-item" onclick="window.location.href='/logout'">
+                    <i class="fa-solid fa-sign-out-alt"></i>
+                    Sign Out
+                </button>
+            `;
+        }
+    };
+
+    const signInWithGoogle = () => {
+        window.location.href = '/login';
     };
 
     const showSettings = () => {
