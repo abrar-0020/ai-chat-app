@@ -181,6 +181,9 @@ def chat(chat_id):
     session['chats'] = chats
     return jsonify({"reply": ai_reply})
 
+# For Vercel deployment - export the app object
+# Vercel will use this as the WSGI application
+
 if __name__ == '__main__':
-    # You can now change this port to 5500 if you want
+    # Local development only
     app.run(debug=True, port=5500)
