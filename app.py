@@ -9,9 +9,15 @@ from functools import wraps
 import json
 
 load_dotenv()
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
+api_key = os.getenv("GEMINI_API_KEY")
+if not api_key:
+    print("ERROR: GEMINI_API_KEY not found in environment variables")
+else:
+    print(f"DEBUG: API Key loaded: {api_key[:10]}...")
 
-MODEL_NAME = "gemini-1.5-flash"
+genai.configure(api_key=api_key)
+
+MODEL_NAME = "gemini-pro"
 app = Flask(__name__)
 app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")  # Needed for session
 CORS(app)
@@ -114,13 +120,37 @@ def get_user():
 
 def query_gemini_text(prompt: str, history=None) -> str:
     try:
+        if not prompt or not prompt.strip():
+            return "❌ Error: Empty message received."
+        
+        print(f"DEBUG: Using model: {MODEL_NAME}")
+        print(f"DEBUG: Prompt length: {len(prompt)}")
+        
         model = genai.GenerativeModel(MODEL_NAME)
-        chat = model.start_chat(history=history or [])
-        response = chat.send_message(prompt)
-        return response.text.strip()
+        
+        # Simple approach without chat history for now
+        response = model.generate_content(prompt)
+        result = response.text.strip() if response.text else "No response received"
+        
+        print(f"DEBUG: Response received: {result[:50]}...")
+        return result
+        
     except Exception as e:
-        print(f"Gemini API Error: {e}")
-        return "❌ Error: Could not get a response from the AI."
+        error_msg = str(e)
+        print(f"Gemini API Error: {error_msg}")
+        print(f"Prompt: {prompt[:100]}...")
+        
+        # Check for specific error types
+        if "API_KEY" in error_msg.upper():
+            return "❌ Error: Invalid API key. Please check your Gemini API key."
+        elif "404" in error_msg:
+            return "❌ Error: Model not found. The Gemini model may not be available."
+        elif "403" in error_msg:
+            return "❌ Error: Access denied. Please check your API key permissions."
+        elif "QUOTA" in error_msg.upper():
+            return "❌ Error: API quota exceeded. Please check your usage limits."
+        else:
+            return f"❌ Error: {error_msg}"
 
 
 # --- Chat history endpoints ---
@@ -170,31 +200,66 @@ def delete_chat(chat_id):
 @app.route('/api/chats/<chat_id>/message', methods=['POST'])
 @login_required
 def chat(chat_id):
-    data = request.get_json()
-    user_message = data.get('message')
-    if not user_message:
-        return jsonify({"error": "No message provided"}), 400
-    chats = get_chats()
-    chat = chats.get(chat_id)
-    if not chat:
-        return jsonify({"error": "Chat not found"}), 404
-    # Build history for Gemini
-    history = []
-    for msg in chat["history"]:
-        if msg["role"] == "user":
-            history.append({"role": "user", "parts": [msg["content"]]})
-        else:
-            history.append({"role": "model", "parts": [msg["content"]]})
-    ai_reply = query_gemini_text(user_message, history)
-    # Save to history
-    chat["history"].append({"role": "user", "content": user_message})
-    chat["history"].append({"role": "model", "content": ai_reply})
-    # Optionally update title if first message
-    if chat["title"] == "New Chat" and len(chat["history"]) == 2:
-        chat["title"] = user_message[:30] + ("..." if len(user_message) > 30 else "")
-    chats[chat_id] = chat
-    session['chats'] = chats
-    return jsonify({"reply": ai_reply})
+    try:
+        data = request.get_json()
+        print(f"DEBUG: Received data: {data}")  # Debug log
+        
+        user_message = data.get('message', '')
+        files = data.get('files', [])
+        
+        print(f"DEBUG: Message: {user_message[:100]}...")  # Debug log
+        print(f"DEBUG: Files: {files}")  # Debug log
+        
+        # Check if we have either message or files
+        if not user_message and not files:
+            return jsonify({"error": "No message or files provided"}), 400
+        
+        chats = get_chats()
+        chat = chats.get(chat_id)
+        if not chat:
+            return jsonify({"error": "Chat not found"}), 404
+        
+        # Build history for Gemini
+        history = []
+        for msg in chat["history"]:
+            if msg["role"] == "user":
+                history.append({"role": "user", "parts": [msg["content"]]})
+            else:
+                history.append({"role": "model", "parts": [msg["content"]]})
+        
+        # Use the full message (which may include file contents) for AI processing
+        ai_reply = query_gemini_text(user_message, history)
+        
+        print(f"DEBUG: AI Reply: {ai_reply[:100]}...")  # Debug log
+        
+        # Save the original user message (without file contents) to history for display
+        original_message = data.get('message', '') if 'files' not in data or not data['files'] else user_message.split('\n\nAttached files:')[0]
+        
+        # Save to history
+        chat["history"].append({"role": "user", "content": original_message})
+        chat["history"].append({"role": "model", "content": ai_reply})
+        
+        # Optionally update title if first message
+        if chat["title"] == "New Chat" and len(chat["history"]) == 2:
+            title_text = original_message or "File upload"
+            chat["title"] = title_text[:30] + ("..." if len(title_text) > 30 else "")
+        
+        chats[chat_id] = chat
+        session['chats'] = chats
+        return jsonify({"reply": ai_reply})
+        
+    except Exception as e:
+        print(f"ERROR in chat endpoint: {e}")
+        return jsonify({"error": f"Server error: {str(e)}"}), 500
+
+# Test endpoint for API debugging
+@app.route('/api/test-gemini')
+def test_gemini():
+    try:
+        test_response = query_gemini_text("Say hello!")
+        return jsonify({"status": "success", "response": test_response})
+    except Exception as e:
+        return jsonify({"status": "error", "error": str(e)})
 
 # For Vercel deployment - export the app object
 # Vercel will use this as the WSGI application
