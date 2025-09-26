@@ -56,7 +56,14 @@
             <div class="chat-messages" id="chat-messages"></div>
 
             <div class="chat-input-area">
-                <input type="text" id="message-input" placeholder="Type your message...">
+                <button id="file-upload-btn" class="file-upload-btn" title="Upload files or images">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <input type="file" id="file-input" multiple accept="image/*,.txt,.pdf,.doc,.docx,.json,.csv" style="display: none;">
+                <div class="input-container">
+                    <input type="text" id="message-input" placeholder="Type your message...">
+                    <div id="file-preview" class="file-preview"></div>
+                </div>
                 <button id="send-btn">
                     <i class="fa-solid fa-paper-plane"></i>
                 </button>

@@ -5,6 +5,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const newChatBtn = document.getElementById('new-chat-btn');
     const messageInput = document.getElementById('message-input');
     const sendBtn = document.getElementById('send-btn');
+    const fileUploadBtn = document.getElementById('file-upload-btn');
+    const fileInput = document.getElementById('file-input');
+    const filePreview = document.getElementById('file-preview');
     const chatMessages = document.getElementById('chat-messages');
     const chatList = document.getElementById('chat-list');
     const userInfo = document.getElementById('user-info');
@@ -18,22 +21,143 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentChatId = null;
     let chats = {};
     let user = null;
+    let selectedFiles = [];
+    
+    // File handling functions
+    const handleFileUpload = () => {
+        fileInput.click();
+    };
+    
+    const handleFileSelection = (event) => {
+        const files = Array.from(event.target.files);
+        selectedFiles = [...selectedFiles, ...files];
+        updateFilePreview();
+        // Clear the input so the same file can be selected again
+        fileInput.value = '';
+    };
+    
+    const removeFile = (index) => {
+        selectedFiles.splice(index, 1);
+        updateFilePreview();
+    };
+    
+    const updateFilePreview = () => {
+        filePreview.innerHTML = '';
+        selectedFiles.forEach((file, index) => {
+            const previewItem = document.createElement('div');
+            previewItem.className = 'file-preview-item';
+            
+            // Check if file is an image
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.src = URL.createObjectURL(file);
+                img.onload = () => URL.revokeObjectURL(img.src);
+                previewItem.appendChild(img);
+            } else {
+                // Show file icon based on type
+                const fileIcon = document.createElement('div');
+                fileIcon.className = 'file-icon';
+                const extension = file.name.split('.').pop().toLowerCase();
+                
+                let iconClass = 'fa-file';
+                if (['pdf'].includes(extension)) iconClass = 'fa-file-pdf';
+                else if (['doc', 'docx'].includes(extension)) iconClass = 'fa-file-word';
+                else if (['txt'].includes(extension)) iconClass = 'fa-file-text';
+                else if (['json'].includes(extension)) iconClass = 'fa-file-code';
+                else if (['csv'].includes(extension)) iconClass = 'fa-file-csv';
+                
+                fileIcon.innerHTML = `<i class="fa-solid ${iconClass}"></i>`;
+                previewItem.appendChild(fileIcon);
+            }
+            
+            const fileName = document.createElement('div');
+            fileName.className = 'file-name';
+            fileName.textContent = file.name;
+            fileName.title = file.name;
+            
+            const removeBtn = document.createElement('button');
+            removeBtn.className = 'remove-file';
+            removeBtn.innerHTML = '<i class="fa-solid fa-times"></i>';
+            removeBtn.onclick = () => removeFile(index);
+            
+            previewItem.appendChild(fileName);
+            previewItem.appendChild(removeBtn);
+            filePreview.appendChild(previewItem);
+        });
+    };
+    
+    const readFileAsText = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsText(file);
+        });
+    };
+    
+    const readFileAsDataURL = (file) => {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
+    };
 
-    const addMessage = (content, sender) => {
+    const addMessage = (content, sender, files = []) => {
         const messageWrapper = document.createElement('div');
         messageWrapper.classList.add('message', `${sender}-message`);
 
         const messageContentDiv = document.createElement('div');
         messageContentDiv.classList.add('message-content');
         
-        const text = document.createElement('p');
-        text.innerHTML = content;
+        // Add file attachments if any
+        if (files && files.length > 0) {
+            const attachments = document.createElement('div');
+            attachments.className = 'message-attachments';
+            
+            files.forEach(file => {
+                const attachment = document.createElement('div');
+                attachment.className = 'attachment-item';
+                
+                if (file.type && file.type.startsWith('image/')) {
+                    const img = document.createElement('img');
+                    img.src = file.data || URL.createObjectURL(file);
+                    img.alt = file.name;
+                    img.style.maxWidth = '200px';
+                    img.style.maxHeight = '150px';
+                    img.style.borderRadius = '8px';
+                    attachment.appendChild(img);
+                } else {
+                    attachment.innerHTML = `
+                        <i class="fa-solid fa-file"></i>
+                        <span>${file.name}</span>
+                    `;
+                    attachment.style.padding = '0.5rem';
+                    attachment.style.backgroundColor = 'rgba(255, 255, 255, 0.1)';
+                    attachment.style.borderRadius = '8px';
+                    attachment.style.display = 'flex';
+                    attachment.style.alignItems = 'center';
+                    attachment.style.gap = '0.5rem';
+                    attachment.style.marginBottom = '0.5rem';
+                }
+                
+                attachments.appendChild(attachment);
+            });
+            
+            messageContentDiv.appendChild(attachments);
+        }
+        
+        if (content.trim()) {
+            const text = document.createElement('p');
+            text.innerHTML = content;
+            messageContentDiv.appendChild(text);
+        }
 
         const timestamp = document.createElement('span');
         timestamp.classList.add('timestamp');
         timestamp.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-        messageContentDiv.appendChild(text);
         messageContentDiv.appendChild(timestamp);
 
         const icon = document.createElement('i');
@@ -338,10 +462,57 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const handleSendMessage = async () => {
         const messageText = messageInput.value.trim();
-        if (!messageText || !currentChatId) return;
+        if (!messageText && selectedFiles.length === 0) return;
+        if (!currentChatId) return;
 
-        addMessage(messageText, 'user');
+        // Process files
+        let processedFiles = [];
+        let fileContents = [];
+        
+        if (selectedFiles.length > 0) {
+            for (const file of selectedFiles) {
+                try {
+                    if (file.type.startsWith('image/')) {
+                        const dataUrl = await readFileAsDataURL(file);
+                        processedFiles.push({
+                            name: file.name,
+                            type: file.type,
+                            data: dataUrl
+                        });
+                        fileContents.push(`[Image: ${file.name}]`);
+                    } else if (file.type.startsWith('text/') || file.name.endsWith('.txt') || file.name.endsWith('.json') || file.name.endsWith('.csv')) {
+                        const content = await readFileAsText(file);
+                        processedFiles.push({
+                            name: file.name,
+                            type: file.type,
+                            content: content
+                        });
+                        fileContents.push(`[File: ${file.name}]\n${content.substring(0, 1000)}${content.length > 1000 ? '...' : ''}`);
+                    } else {
+                        processedFiles.push({
+                            name: file.name,
+                            type: file.type
+                        });
+                        fileContents.push(`[File: ${file.name} - ${file.type}]`);
+                    }
+                } catch (error) {
+                    console.error('Error processing file:', file.name, error);
+                    fileContents.push(`[Error reading file: ${file.name}]`);
+                }
+            }
+        }
+
+        // Combine message text with file contents for AI processing
+        let fullMessage = messageText;
+        if (fileContents.length > 0) {
+            fullMessage = `${messageText}\n\nAttached files:\n${fileContents.join('\n\n')}`;
+        }
+
+        // Add message to chat UI
+        addMessage(messageText, 'user', processedFiles);
         messageInput.value = '';
+        selectedFiles = [];
+        updateFilePreview();
 
         addMessage("💭 Thinking...", 'ai');
         const thinkingMessage = chatMessages.lastChild;
@@ -352,7 +523,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: messageText }),
+                body: JSON.stringify({ 
+                    message: fullMessage,
+                    files: processedFiles.map(f => ({ name: f.name, type: f.type }))
+                }),
             });
 
             if (!response.ok) { throw new Error('Network response was not ok.'); }
@@ -386,6 +560,8 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     newChatBtn.addEventListener('click', createNewChat);
     userMenuBtn.addEventListener('click', toggleUserMenu);
+    fileUploadBtn.addEventListener('click', handleFileUpload);
+    fileInput.addEventListener('change', handleFileSelection);
 
     // Initialize app
     const initializeApp = async () => {
