@@ -136,39 +136,51 @@ def get_user():
     return jsonify({'error': 'Not authenticated'}), 401
 
 def query_gemini_text(prompt: str, history=None) -> str:
-    """Send a prompt to Gemini, preserving conversation history."""
-    try:
-        if not prompt or not prompt.strip():
-            return "❌ Error: Empty message received."
+    """Send a prompt to Gemini, preserving conversation history. Retries on 429."""
+    import time
 
-        print(f"DEBUG: Using model: {MODEL_NAME}")
-        print(f"DEBUG: Prompt length: {len(prompt)}, History turns: {len(history) if history else 0}")
+    if not prompt or not prompt.strip():
+        return "❌ Error: Empty message received."
 
-        model = genai.GenerativeModel(MODEL_NAME)
+    print(f"DEBUG: Using model: {MODEL_NAME}")
+    print(f"DEBUG: Prompt length: {len(prompt)}, History turns: {len(history) if history else 0}")
 
-        # Start a chat session with prior history so context is preserved
-        chat_session = model.start_chat(history=history or [])
-        response = chat_session.send_message(prompt)
-        result = response.text.strip() if response.text else "No response received"
+    model = genai.GenerativeModel(MODEL_NAME)
+    max_retries = 3
+    delay = 5  # seconds between retries
 
-        print(f"DEBUG: Response received: {result[:50]}...")
-        return result
+    for attempt in range(1, max_retries + 1):
+        try:
+            chat_session = model.start_chat(history=history or [])
+            response = chat_session.send_message(prompt)
+            result = response.text.strip() if response.text else "No response received"
+            print(f"DEBUG: Response received: {result[:50]}...")
+            return result
 
-    except Exception as e:
-        error_msg = str(e)
-        print(f"Gemini API Error: {error_msg}")
-        print(f"Prompt: {prompt[:100]}...")
+        except Exception as e:
+            error_msg = str(e)
+            print(f"Gemini API Error (attempt {attempt}): {error_msg}")
 
-        if "API_KEY" in error_msg.upper() or "api key" in error_msg.lower():
-            return "❌ Error: Invalid or missing API key. Please check your GEMINI_API_KEY in Vercel environment variables."
-        elif "404" in error_msg or "not found" in error_msg.lower():
-            return "❌ Error: Model not found. The Gemini model may not be available in your region or API key tier."
-        elif "403" in error_msg:
-            return "❌ Error: Access denied. Please check your API key permissions."
-        elif "QUOTA" in error_msg.upper() or "429" in error_msg:
-            return "❌ Error: API quota exceeded. Please check your usage limits."
-        else:
-            return f"❌ Error: {error_msg}"
+            # Retry on 429 rate limit
+            if ("429" in error_msg or "QUOTA" in error_msg.upper() or "Resource has been exhausted" in error_msg):
+                if attempt < max_retries:
+                    print(f"Rate limited — retrying in {delay}s...")
+                    time.sleep(delay)
+                    delay *= 2  # exponential backoff
+                    continue
+                return "❌ Rate limit reached. The free tier allows 15 requests/minute. Please wait a moment and try again."
+
+            # Non-retryable errors
+            if "API_KEY" in error_msg.upper() or "api key" in error_msg.lower():
+                return "❌ Error: Invalid or missing API key. Check GEMINI_API_KEY in Vercel environment variables."
+            elif "404" in error_msg or "not found" in error_msg.lower():
+                return "❌ Error: Model not found. Please check your Gemini API key region/tier."
+            elif "403" in error_msg:
+                return "❌ Error: Access denied. Enable the Generative Language API in Google Cloud Console."
+            else:
+                return f"❌ Error: {error_msg}"
+
+    return "❌ Error: Failed after multiple retries. Please try again later."
 
 
 # --- Chat history endpoints ---
