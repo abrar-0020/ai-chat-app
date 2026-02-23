@@ -18,7 +18,7 @@ else:
 
 genai.configure(api_key=api_key)
 
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-2.0-flash"
 app = Flask(__name__)
 
 # Trust Vercel's reverse proxy so url_for() generates https:// URLs for OAuth
