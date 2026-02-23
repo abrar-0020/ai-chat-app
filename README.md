@@ -1,79 +1,74 @@
 # AI Chat Assistant 🤖
 
-A modern web-based AI chat application built with Flask and Google's Gemini AI, featuring Google OAuth authentication and persistent chat history.
+A modern web-based AI chat application built with Flask and Google's **Gemini 1.5 Flash** model, featuring Google OAuth 2.0 authentication, persistent multi-session chat history, file uploads, and an interactive 3D AI avatar.
 
 ![AI Chat Assistant](https://via.placeholder.com/800x400/2a1154/ffffff?text=AI+Chat+Assistant)
 
 ## ✨ Features
 
 ### 🔐 Authentication
-- **Google OAuth 2.0 Sign-In** - Secure authentication with your Google account
-- **User Profile Management** - Display user info in sidebar like ChatGPT
-- **Session Management** - Secure server-side session handling
+- **Google OAuth 2.0 Sign-In** — Secure sign-in via OpenID Connect discovery (`server_metadata_url`)
+- **Guest Mode** — Try the app without signing in
+- **User Profile Panel** — Displays avatar, name, and email in the sidebar (ChatGPT-style)
+- **Session Management** — Secure server-side Flask session handling with proper `session.modified` tracking
 
 ### 💬 Chat Features
-- **AI-Powered Conversations** - Powered by Google's Gemini 1.5 Flash model
-- **Real-time Messaging** - Instant AI responses with typing indicators
-- **Message History** - Complete conversation persistence per user
+- **AI-Powered Conversations** — Powered by `gemini-1.5-flash` (fast, free-tier friendly)
+- **Full Conversation Memory** — Chat history is passed to Gemini on every request so the AI remembers context
+- **Real-time Responses** — Instant AI replies with a "Thinking…" indicator
+- **File Uploads** — Attach images, `.txt`, `.pdf`, `.json`, `.csv` files alongside messages
 
 ### 📱 Chat Management (ChatGPT-style)
-- **Multiple Conversations** - Create and manage multiple chat sessions
-- **Chat History Sidebar** - Easy navigation between conversations
-- **Auto-Generated Titles** - Chat titles from first message
-- **Delete Individual Chats** - Remove specific conversations with confirmation
-- **Clear All Chats** - Bulk delete all conversations from user menu
-- **Active Chat Highlighting** - Visual indication of current conversation
+- **Multiple Conversations** — Create and switch between chat sessions
+- **Chat History Sidebar** — Collapsible sidebar with all past chats
+- **Auto-Generated Titles** — First message becomes the chat title
+- **Delete Individual Chats** — Remove specific conversations with confirmation
+- **Clear All Chats** — Bulk delete from the user menu
 
 ### 🎨 User Interface
-- **Modern Dark Theme** - Beautiful purple gradient design
-- **Responsive Design** - Works on desktop and mobile devices
-- **Collapsible Sidebar** - Maximize chat area when needed
-- **User Account Panel** - Profile management at bottom of sidebar
-- **Smooth Animations** - Polished user experience
+- **Modern Dark Theme** — Purple gradient design
+- **3D AI Avatar Panel** — Interactive Sketchfab-embedded 3D companion
+- **Responsive Design** — Works on desktop and mobile
+- **Smooth Animations** — Polished sidebar slide and button transitions
 
 ### 🛡️ Security
-- **Protected API Endpoints** - All chat operations require authentication
-- **User-Specific Data** - Chat history isolated per user account
-- **Secure Token Handling** - Proper OAuth token validation
+- **Protected API Endpoints** — `@login_required` decorator on all `/api/*` routes
+- **User-Isolated Data** — Chat history scoped to each user session
+- **Proper OAuth Token Handling** — Uses OpenID Connect userinfo with `sub`/`id` fallback
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 - Python 3.11+
 - Google Cloud Project with OAuth 2.0 credentials
-- Google Gemini API key
+- Google Gemini API key (get one free at [aistudio.google.com](https://aistudio.google.com/))
 
 ### Installation
 
 1. **Clone the repository**
    ```bash
-   git clone <your-repo-url>
-   cd ai-chat-app-main
+   git clone https://github.com/abrar-0020/ai-chat-app.git
+   cd ai-chat-app
    ```
 
 2. **Install dependencies**
    ```bash
-   pip install flask flask-cors python-dotenv authlib requests google-generativeai
+   pip install -r requirements.txt
    ```
 
-3. **Set up environment variables**
-   ```bash
-   cp .env.example .env
-   ```
-   
-   Update `.env` with your credentials:
+3. **Create a `.env` file** in the project root:
    ```env
    GOOGLE_CLIENT_ID=your_google_client_id
    GOOGLE_CLIENT_SECRET=your_google_client_secret
    GEMINI_API_KEY=your_gemini_api_key
-   SECRET_KEY=your_secret_key
+   SECRET_KEY=any_random_secret_string
    ```
 
 4. **Configure Google OAuth**
-   - Go to [Google Cloud Console](https://console.cloud.google.com/)
-   - Create OAuth 2.0 credentials
-   - Add redirect URI: `http://localhost:5500/authorize`
-   - See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for detailed instructions
+   - Go to [Google Cloud Console](https://console.cloud.google.com/) → APIs & Services → Credentials
+   - Create an OAuth 2.0 Client ID (Web application)
+   - Add authorized redirect URI: `http://localhost:5500/authorize`
+   - See [GOOGLE_OAUTH_SETUP.md](GOOGLE_OAUTH_SETUP.md) for full instructions
 
 5. **Run the application**
    ```bash
@@ -86,93 +81,85 @@ A modern web-based AI chat application built with Flask and Google's Gemini AI, 
 ## 📁 Project Structure
 
 ```
-ai-chat-app-main/
-├── app.py                 # Main Flask application
-├── .env.example          # Environment variables template
-├── .env                  # Your environment variables (not in git)
-├── .gitignore           # Git ignore rules
-├── GOOGLE_OAUTH_SETUP.md # OAuth setup guide
+ai-chat-app/
+├── app.py                  # Main Flask app — routes, Gemini API, OAuth, session logic
+├── index.py                # Vercel entry point
+├── requirements.txt        # Python dependencies
+├── vercel.json             # Vercel deployment config
+├── .env                    # Environment variables (not committed)
+├── .gitignore
+├── GOOGLE_OAUTH_SETUP.md   # Step-by-step OAuth setup guide
+├── VERCEL_DEPLOYMENT.md    # Vercel deployment guide
 ├── templates/
-│   ├── index.html       # Main chat interface
-│   └── signin.html      # Google sign-in page
+│   ├── index.html          # Main chat UI
+│   └── signin.html         # Sign-in page
 └── static/
-    ├── script.js        # Frontend JavaScript
-    └── style.css        # Styling and animations
+    ├── script.js           # Frontend logic (chat, file uploads, user menu)
+    └── style.css           # Styles and animations
 ```
 
 ## 🔧 API Endpoints
 
 ### Authentication
-- `GET /` - Main chat interface (redirects to sign-in if not authenticated)
-- `GET /signin` - Sign-in page
-- `GET /login` - Initiate Google OAuth flow
-- `GET /authorize` - OAuth callback handler
-- `GET /logout` - Sign out and clear session
-- `GET /api/user` - Get current user info
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/` | Main chat interface (redirects to sign-in if unauthenticated) |
+| `GET` | `/signin` | Sign-in page |
+| `GET` | `/login` | Initiates Google OAuth flow |
+| `GET` | `/authorize` | OAuth callback handler |
+| `GET` | `/guest` | Enter guest mode |
+| `GET` | `/logout` | Sign out and clear session |
+| `GET` | `/api/user` | Get current user info |
 
 ### Chat Management
-- `GET /api/chats` - List all user's chats
-- `POST /api/chats` - Create new chat
-- `GET /api/chats/<chat_id>` - Get specific chat history
-- `POST /api/chats/<chat_id>/message` - Send message to chat
-- `DELETE /api/chats/<chat_id>` - Delete specific chat
+| Method | Route | Description |
+|--------|-------|-------------|
+| `GET` | `/api/chats` | List all chats |
+| `POST` | `/api/chats` | Create a new chat |
+| `GET` | `/api/chats/<id>` | Get chat history |
+| `POST` | `/api/chats/<id>/message` | Send a message |
+| `DELETE` | `/api/chats/<id>` | Delete a chat |
 
 ## 🎯 Usage
 
 ### Starting a Conversation
-1. Sign in with your Google account
-2. A new chat is automatically created
-3. Type your message and press Enter or click Send
-4. The AI will respond using Google's Gemini model
+1. Sign in with Google (or continue as Guest)
+2. A new chat is created automatically
+3. Type your message and press **Enter** or click **Send**
+4. The AI responds using Gemini 1.5 Flash with full conversation memory
 
 ### Managing Chats
-- **New Chat**: Click the "New Chat" button in the sidebar
-- **Switch Chats**: Click on any chat in the history sidebar
-- **Delete Chat**: Hover over a chat and click the trash icon
-- **Clear All**: Click your profile → "Clear All Chats"
+- **New Chat** — Click "New Chat" in the sidebar
+- **Switch Chats** — Click any chat in the history list
+- **Delete Chat** — Hover a chat → click the trash icon
+- **Clear All** — Click your profile → "Clear All Chats"
 
-### User Account
-- View your profile info at the bottom of the sidebar
-- Access account settings and sign out from the user menu
+### Uploading Files
+- Click the **+** button next to the input box
+- Select images, text, JSON, or CSV files
+- Add an optional message and send — file contents are included in the AI prompt
 
-## 🔒 Security Features
+## 🛠️ Technologies
 
-- All API endpoints are protected with authentication decorators
-- User sessions are managed server-side with Flask sessions
-- Chat history is isolated per user account
-- OAuth tokens are properly validated with time tolerance
-- Sensitive data is excluded from version control
-
-## 🛠️ Technologies Used
-
-### Backend
-- **Flask** - Python web framework
-- **Authlib** - OAuth 2.0 client library
-- **Google Generative AI** - Gemini API client
-- **Flask-CORS** - Cross-origin resource sharing
-- **python-dotenv** - Environment variable management
-
-### Frontend
-- **Vanilla JavaScript** - No framework dependencies
-- **Font Awesome** - Icons and UI elements
-- **Google Fonts** - Poppins font family
-- **CSS3** - Modern styling with flexbox and animations
-
-### Authentication & AI
-- **Google OAuth 2.0** - Secure user authentication
-- **Google Gemini 1.5 Flash** - AI conversation model
-- **Session-based Auth** - Server-side session management
+| Layer | Tech |
+|-------|------|
+| Backend | Flask, Flask-CORS, python-dotenv |
+| AI | Google Gemini 1.5 Flash (`google-generativeai`) |
+| Auth | Google OAuth 2.0 via Authlib (OpenID Connect) |
+| Frontend | Vanilla JS, CSS3, Font Awesome, Google Fonts (Poppins) |
+| Deployment | Vercel (serverless Python) |
 
 ## 🌟 Features Comparison
 
 | Feature | This App | ChatGPT |
 |---------|----------|---------|
 | Google Sign-In | ✅ | ❌ |
+| Guest Mode | ✅ | ❌ |
 | Multiple Conversations | ✅ | ✅ |
-| Delete Individual Chats | ✅ | ✅ |
-| Clear All Chats | ✅ | ✅ |
-| Real-time Responses | ✅ | ✅ |
-| User Profile in Sidebar | ✅ | ✅ |
+| Conversation Memory | ✅ | ✅ |
+| File Uploads | ✅ | ✅ |
+| Delete / Clear Chats | ✅ | ✅ |
+| 3D Avatar | ✅ | ❌ |
 | Mobile Responsive | ✅ | ✅ |
 | Dark Theme | ✅ | ✅ |
 
@@ -186,17 +173,18 @@ ai-chat-app-main/
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+This project is licensed under the MIT License.
 
 ## 🤝 Acknowledgments
 
 - Google for the Gemini AI API and OAuth services
 - Flask community for the excellent web framework
 - Font Awesome for the beautiful icons
+- Sketchfab for the 3D avatar embed
 
 ## 📞 Support
 
-If you encounter any issues or have questions:
+If you encounter any issues:
 
 1. Check the [Google OAuth Setup Guide](GOOGLE_OAUTH_SETUP.md)
 2. Ensure all environment variables are set correctly

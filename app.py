@@ -1,5 +1,6 @@
 from flask import Flask, request, jsonify, render_template, session, redirect, url_for
 from flask_cors import CORS
+from werkzeug.middleware.proxy_fix import ProxyFix
 import os
 import uuid
 import requests
@@ -19,7 +20,19 @@ genai.configure(api_key=api_key)
 
 MODEL_NAME = "gemini-1.5-flash"
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")  # Needed for session
+
+# Trust Vercel's reverse proxy so url_for() generates https:// URLs for OAuth
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+app.secret_key = os.getenv("SECRET_KEY", "supersecretkey")
+
+# Secure session cookies in production (Vercel always uses HTTPS)
+IS_PRODUCTION = os.getenv("VERCEL") or os.getenv("VERCEL_ENV")
+if IS_PRODUCTION:
+    app.config["SESSION_COOKIE_SECURE"] = True
+    app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
+
 CORS(app)
 
 # OAuth setup
