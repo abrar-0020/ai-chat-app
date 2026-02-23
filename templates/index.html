@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Chat Assistant</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+</head>
+<body>
+
+    <div class="container">
+        <div class="sidebar">
+            <button id="new-chat-btn">
+                <i class="fa-solid fa-plus"></i>
+                New Chat
+            </button>
+            <div class="chat-history">
+                <h3>Chat History</h3>
+                <div id="chat-list" class="chat-list">
+                    <!-- Chat history items will be populated here -->
+                </div>
+            </div>
+            
+            <div class="user-account">
+                <div class="user-info" id="user-info">
+                    <div class="user-avatar" id="user-avatar">
+                        <!-- User avatar or initials will be populated here -->
+                    </div>
+                    <div class="user-details">
+                        <div class="user-name" id="user-name">Loading...</div>
+                        <div class="user-email" id="user-email"></div>
+                    </div>
+                    <button class="user-menu-btn" id="user-menu-btn">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                </div>
+                
+                <div class="user-menu" id="user-menu">
+                    <!-- Menu items will be populated by JavaScript based on user type -->
+                </div>
+            </div>
+        </div>
+
+        <div class="chat-panel">
+            <div class="panel-header">
+                <div class="header-content">
+                    <button id="menu-toggle-btn">
+                        <i class="fa-solid fa-bars"></i>
+                    </button>
+                    <h1>AI Chat Assistant</h1>
+                </div>
+                <p>Have a conversation with your intelligent AI companion</p>
+            </div>
+            
+            <div class="chat-messages" id="chat-messages"></div>
+
+            <div class="chat-input-area">
+                <button id="file-upload-btn" class="file-upload-btn" title="Upload files or images">
+                    <i class="fa-solid fa-plus"></i>
+                </button>
+                <input type="file" id="file-input" multiple accept="image/*,.txt,.pdf,.doc,.docx,.json,.csv" style="display: none;">
+                <div class="input-container">
+                    <input type="text" id="message-input" placeholder="Type your message...">
+                    <div id="file-preview" class="file-preview"></div>
+                </div>
+                <button id="send-btn">
+                    <i class="fa-solid fa-paper-plane"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="avatar-panel">
+            <div class="panel-header">
+                <h2>AI Avatar</h2>
+                <p>Interactive 3D companion</p>
+            </div>
+            <div class="avatar-container">
+                <iframe title="ChatBot" frameborder="0" allowfullscreen mozallowfullscreen="true" webkitallowfullscreen="true" allow="autoplay; fullscreen; xr-spatial-tracking" xr-spatial-tracking execution-while-out-of-viewport execution-while-not-rendered web-share src="https://sketchfab.com/models/200d00d02dfa40cf8c71822d9ee3ee66/embed?autostart=1&transparent=1&ui_theme=dark"> </iframe>
+            </div>
+        </div>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

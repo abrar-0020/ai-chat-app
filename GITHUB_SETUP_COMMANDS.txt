@@ -1,0 +1,18 @@
+# Commands to run after creating your GitHub repository
+
+# Replace YOUR_REPO_NAME with your actual repository name
+git remote add origin https://github.com/abrar-0020/YOUR_REPO_NAME.git
+git push -u origin main
+
+# Example:
+# git remote add origin https://github.com/abrar-0020/ai-chat-assistant.git
+# git push -u origin main
+
+# That's it! Your project will be live on GitHub with all features:
+# ✅ Google OAuth authentication  
+# ✅ AI chat with Gemini
+# ✅ Multiple conversations
+# ✅ Delete/Clear chat functionality
+# ✅ User profile management
+# ✅ ChatGPT-style interface
+# ✅ Complete documentation
