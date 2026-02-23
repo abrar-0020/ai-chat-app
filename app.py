@@ -72,7 +72,9 @@ def signin():
 
 @app.route('/login')
 def login():
-    redirect_uri = url_for('authorize', _external=True)
+    # Use REDIRECT_URI env var in production (Vercel) to guarantee https://
+    # Falls back to url_for for local development
+    redirect_uri = os.getenv('REDIRECT_URI') or url_for('authorize', _external=True)
     return google.authorize_redirect(redirect_uri)
 
 @app.route('/authorize')
