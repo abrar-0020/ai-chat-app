@@ -159,10 +159,10 @@ def query_gemini_text(prompt: str, history=None) -> str:
         print(f"Gemini API Error: {error_msg}")
         print(f"Prompt: {prompt[:100]}...")
 
-        if "API_KEY" in error_msg.upper():
-            return "❌ Error: Invalid API key. Please check your Gemini API key."
-        elif "404" in error_msg:
-            return "❌ Error: Model not found. The Gemini model may not be available."
+        if "API_KEY" in error_msg.upper() or "api key" in error_msg.lower():
+            return "❌ Error: Invalid or missing API key. Please check your GEMINI_API_KEY in Vercel environment variables."
+        elif "404" in error_msg or "not found" in error_msg.lower():
+            return "❌ Error: Model not found. The Gemini model may not be available in your region or API key tier."
         elif "403" in error_msg:
             return "❌ Error: Access denied. Please check your API key permissions."
         elif "QUOTA" in error_msg.upper() or "429" in error_msg:
@@ -280,6 +280,18 @@ def test_gemini():
         return jsonify({"status": "success", "response": test_response})
     except Exception as e:
         return jsonify({"status": "error", "error": str(e)})
+
+@app.route('/api/debug')
+def debug_env():
+    """Check environment variables are loaded (safe - never exposes actual values)"""
+    return jsonify({
+        "GEMINI_API_KEY_set": bool(os.getenv("GEMINI_API_KEY")),
+        "GOOGLE_CLIENT_ID_set": bool(os.getenv("GOOGLE_CLIENT_ID")),
+        "GOOGLE_CLIENT_SECRET_set": bool(os.getenv("GOOGLE_CLIENT_SECRET")),
+        "SECRET_KEY_set": bool(os.getenv("SECRET_KEY")),
+        "REDIRECT_URI_set": bool(os.getenv("REDIRECT_URI")),
+        "MODEL": MODEL_NAME,
+    })
 
 # For Vercel deployment - export the app object
 # Vercel will use this as the WSGI application
